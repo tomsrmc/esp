@@ -5,7 +5,7 @@ using Core::sendJson;
 
 namespace Endpoints {
   void handleHealth() {
-    StaticJsonDocument<64> doc;
+    JsonDocument doc;
     doc["status"] = "ok";
     String out;
     serializeJson(doc, out);
