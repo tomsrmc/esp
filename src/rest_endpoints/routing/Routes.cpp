@@ -28,10 +28,6 @@ namespace Endpoints {
     s.on("/health", HTTP_GET, wrap(Endpoints::handleHealth));
     s.on("/health", HTTP_OPTIONS, handleOptions);
 
-    // Run
-    s.on("/run", HTTP_POST, wrap(Endpoints::handleRun));
-    s.on("/run", HTTP_OPTIONS, handleOptions);
-
     // System info
     s.on("/system/info", HTTP_GET, wrap(Endpoints::handleInfo));
     s.on("/system/info", HTTP_OPTIONS, handleOptions);

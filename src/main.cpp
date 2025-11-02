@@ -7,10 +7,11 @@
 #include "core/AppServer.h"
 #include "core/WiFiManager.h"
 #include "core/MDNSManager.h"
-#include "core/WebSocketManager.h"
-#include "core/WebSocketHandlers.h"
 
-#include "endpoints/routing/Endpoints.h"
+#include "websocket/WebSocketManager.h"
+#include "websocket/MessageRouter.h"
+
+#include "rest_endpoints/routing/Endpoints.h"
 
 using namespace Core;
 
@@ -32,14 +33,14 @@ void setup() {
   startServer();
 
   // Start WebSocket server
-  Core::WebSocketManager::begin(81);
-  Core::WebSocketManager::onMessage(WebSocketHandlers::handleMessage);
+  WebSocket::Manager::begin(81);
+  WebSocket::Manager::onMessage(WebSocket::handleMessage);
   Serial.println("WebSocket server ready on port 81");
 }
 
 void loop() {
   server.handleClient();
-  Core::WebSocketManager::loop();
+  WebSocket::Manager::loop();
   
   static unsigned long last = 0;
   if (millis() - last > HEARTBEAT_PERIOD) {
