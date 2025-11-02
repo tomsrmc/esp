@@ -7,6 +7,8 @@
 #include "core/AppServer.h"
 #include "core/WiFiManager.h"
 #include "core/MDNSManager.h"
+#include "core/WebSocketManager.h"
+#include "core/WebSocketHandlers.h"
 
 #include "endpoints/routing/Endpoints.h"
 
@@ -25,12 +27,20 @@ void setup() {
   WiFiManager::connect(WIFI_SSID, WIFI_PASSWORD, Serial);
   MDNSManager::begin(MDNS_HOSTNAME);
 
+  // Start HTTP server
   Endpoints::registerAll(server);
   startServer();
+
+  // Start WebSocket server
+  Core::WebSocketManager::begin(81);
+  Core::WebSocketManager::onMessage(WebSocketHandlers::handleMessage);
+  Serial.println("WebSocket server ready on port 81");
 }
 
 void loop() {
   server.handleClient();
+  Core::WebSocketManager::loop();
+  
   static unsigned long last = 0;
   if (millis() - last > HEARTBEAT_PERIOD) {
     last = millis();
