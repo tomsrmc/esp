@@ -6,7 +6,13 @@ namespace WebSocket {
   namespace Commands {
 
     bool handleStatus(uint8_t clientNum, const JsonDocument& doc) {
+      // Get request ID if provided
+      int requestId = doc["id"] | 0;
+      
       JsonDocument response;
+      if (requestId > 0) {
+        response["id"] = requestId;
+      }
       response["status"] = "ok";
       response["uptime"] = millis();
       response["freeHeap"] = ESP.getFreeHeap();
