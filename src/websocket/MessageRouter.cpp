@@ -1,6 +1,7 @@
 #include "MessageRouter.h"
 #include "WebSocketManager.h"
 #include "Commands.h"
+#include "commands/Stepper.h"
 #include <ArduinoJson.h>
 
 namespace WebSocket {
@@ -25,6 +26,9 @@ namespace WebSocket {
     }
     else if (strcmp(command, "status") == 0) {
       handled = Commands::handleStatus(clientNum, doc);
+    }
+    else if (strcmp(command, "stepper_jog") == 0) {
+      handled = Commands::handleStepperJog(clientNum, doc);
     }
     
     if (!handled) {

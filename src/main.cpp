@@ -1,50 +1,50 @@
+
 #include <Arduino.h>
 #include <WiFi.h>
 #include <WebServer.h>
 #include "config/secrets.h"
-
 #include "core/Led.h"
 #include "core/AppServer.h"
 #include "core/WiFiManager.h"
+#include "core/StepperController.h"
 #include "core/MDNSManager.h"
-
 #include "websocket/WebSocketManager.h"
 #include "websocket/MessageRouter.h"
-
 #include "rest_endpoints/routing/Endpoints.h"
 
 using namespace Core;
 
-static Led heartbeatLed(2, false);
 static const unsigned long HEARTBEAT_PERIOD = 3000;
+StepperController stepper(25, 26, 27);
 
 void setup() {
-  Serial.begin(115200);
-  delay(200);
-  Serial.println();
-  Serial.println("Booting ESP32 API…");
+	Serial.begin(115200);
+	delay(200);
+	Serial.println();
+	Serial.println("Booting ESP32 API with Stepper…");
 
-  heartbeatLed.begin();
-  WiFiManager::connect(WIFI_SSID, WIFI_PASSWORD, Serial);
-  MDNSManager::begin(MDNS_HOSTNAME);
+	stepper.begin();
+	WiFiManager::connect(WIFI_SSID, WIFI_PASSWORD, Serial);
+	MDNSManager::begin(MDNS_HOSTNAME);
 
-  // Start HTTP server
-  Endpoints::registerAll(server);
-  startServer();
+	// Start HTTP server
+	Endpoints::registerAll(server);
+	startServer();
 
-  // Start WebSocket server
-  WebSocket::Manager::begin(81);
-  WebSocket::Manager::onMessage(WebSocket::handleMessage);
-  Serial.println("WebSocket server ready on port 81");
+	// Start WebSocket server
+	WebSocket::Manager::begin(81);
+	WebSocket::Manager::onMessage(WebSocket::handleMessage);
+	Serial.println("WebSocket server ready on port 81");
 }
 
 void loop() {
-  server.handleClient();
-  WebSocket::Manager::loop();
-  
-  static unsigned long last = 0;
-  if (millis() - last > HEARTBEAT_PERIOD) {
-    last = millis();
-    heartbeatLed.pulse(100, 0, 1);
-  }
+	server.handleClient();
+	WebSocket::Manager::loop();
+	stepper.loop();
+	static unsigned long last = 0;
+	if (millis() - last > HEARTBEAT_PERIOD) {
+		last = millis();
+		WebSocket::Manager::sendPing();
+	}
 }
+

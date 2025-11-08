@@ -70,5 +70,12 @@ namespace WebSocket {
         server_->sendTXT(clientNum, msg);
       }
     }
+
+    void sendPing() {
+      if (server_) {
+        server_->broadcastPing();
+        Serial.println("Ping sent to all clients");
+      }
+    }
   }
 }
