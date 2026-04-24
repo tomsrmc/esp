@@ -31,5 +31,17 @@ namespace Endpoints {
     // System info
     s.on("/system/info", HTTP_GET, wrap(Endpoints::handleInfo));
     s.on("/system/info", HTTP_OPTIONS, handleOptions);
+
+    // Alias for legacy status command
+    s.on("/system/status", HTTP_GET, wrap(Endpoints::handleInfo));
+    s.on("/system/status", HTTP_OPTIONS, handleOptions);
+
+    // LED blink
+    s.on("/led/blink", HTTP_POST, wrap(Endpoints::handleBlink));
+    s.on("/led/blink", HTTP_OPTIONS, handleOptions);
+
+    // Stepper jog
+    s.on("/stepper/jog", HTTP_POST, wrap(Endpoints::handleStepperJog));
+    s.on("/stepper/jog", HTTP_OPTIONS, handleOptions);
   }
 }
