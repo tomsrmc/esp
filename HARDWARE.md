@@ -114,6 +114,7 @@ Because of that, any statement such as `160 steps = 2 mm` is only valid after ca
 For this board and project:
 
 - connect the ESP32 to the host by USB-C
+- find the actual port with `pio device list` (usually `/dev/cu.usbserial-110` on this machine)
 - flash with `pio run --target upload`
 - monitor serial output with `pio device monitor`
 
