@@ -19,7 +19,7 @@ class StepperController {
 public:
     static constexpr float kMinSpeed = 1.0f;
     static constexpr float kDefaultSpeed = 24000.0f;
-    static constexpr float kMaxSpeed = 50000.0f;
+    static constexpr float kMaxSpeed = 100000.0f;
     static constexpr float kMinAcceleration = 1.0f;
     static constexpr float kDefaultAcceleration = 250000.0f;
     static constexpr float kMaxAcceleration = 800000.0f;
