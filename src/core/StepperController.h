@@ -17,9 +17,11 @@ struct StepperState {
 class StepperController {
 public:
     static constexpr float kMinSpeed = 1.0f;
-    static constexpr float kMaxSpeed = 4000.0f;
+    static constexpr float kDefaultSpeed = 6000.0f;
+    static constexpr float kMaxSpeed = 12000.0f;
     static constexpr float kMinAcceleration = 1.0f;
-    static constexpr float kMaxAcceleration = 8000.0f;
+    static constexpr float kDefaultAcceleration = 60000.0f;
+    static constexpr float kMaxAcceleration = 120000.0f;
 
     StepperController(int stepPin, int dirPin, int enPin);
     void begin();

@@ -12,8 +12,8 @@ void StepperController::begin() {
     digitalWrite(enPin_, LOW); // Enable driver
     enabled_ = true;
     stepper_.setMinPulseWidth(20);
-    stepper_.setMaxSpeed(800.0f);
-    stepper_.setAcceleration(600.0f);
+    stepper_.setMaxSpeed(kDefaultSpeed);
+    stepper_.setAcceleration(kDefaultAcceleration);
     digitalWrite(enPin_, LOW);
     delay(300);
     Serial.printf("Stepper ready: enablePin=%d maxSpeed=%.1f accel=%.1f minPulseWidth=%u\n",
