@@ -2,7 +2,13 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <WebServer.h>
+#if __has_include("config/secrets.h")
 #include "config/secrets.h"
+#elif __has_include("config/secrets.example.h")
+#include "config/secrets.example.h"
+#else
+#error "Missing config/secrets.h. Copy src/config/secrets.example.h to src/config/secrets.h and update the values."
+#endif
 #include "core/Led.h"
 #include "core/AppServer.h"
 #include "core/WiFiManager.h"
