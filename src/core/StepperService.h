@@ -11,6 +11,9 @@ public:
     static constexpr const char* kProtocolVersion = "1.0";
     static constexpr const char* kAxisName = "main";
 
+    // Source of truth for the external motion contract: command names,
+    // response envelopes, emitted events, validation bounds, and StepperState.
+
     enum class EventKind {
         Started,
         Completed,

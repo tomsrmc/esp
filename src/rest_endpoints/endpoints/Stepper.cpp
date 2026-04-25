@@ -56,7 +56,7 @@ namespace Endpoints {
       return;
     }
 
-    long delta = doc["delta"] | 80;
+    long delta = doc["delta"] | 160;
     float speed = doc["speed"] | 800.0f;
     JsonDocument response;
     int httpCode = stepperService.jog(delta, speed, false, 0, response);

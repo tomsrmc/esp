@@ -1,5 +1,6 @@
 #pragma once
-#include <AccelStepper.h>
+
+#include <FastAccelStepper.h>
 
 namespace Core {
 
@@ -17,11 +18,13 @@ struct StepperState {
 class StepperController {
 public:
     static constexpr float kMinSpeed = 1.0f;
-    static constexpr float kDefaultSpeed = 6000.0f;
-    static constexpr float kMaxSpeed = 12000.0f;
+    static constexpr float kDefaultSpeed = 24000.0f;
+    static constexpr float kMaxSpeed = 50000.0f;
     static constexpr float kMinAcceleration = 1.0f;
-    static constexpr float kDefaultAcceleration = 60000.0f;
-    static constexpr float kMaxAcceleration = 120000.0f;
+    static constexpr float kDefaultAcceleration = 250000.0f;
+    static constexpr float kMaxAcceleration = 800000.0f;
+    static constexpr uint16_t kDirectionChangeDelayMicros = 2U;
+    static constexpr uint16_t kEnableDelayMicros = 20U;
 
     StepperController(int stepPin, int dirPin, int enPin);
     void begin();
@@ -43,9 +46,20 @@ public:
     bool isEnabled() const;
     static bool isValidMaxSpeed(float speed);
     static bool isValidAcceleration(float acceleration);
+
 private:
-    AccelStepper stepper_;
+    void applyMotionProfile();
+    StepperState buildState() const;
+
+    FastAccelStepperEngine engine_;
+    FastAccelStepper* stepper_;
+    int stepPin_;
+    int dirPin_;
     int enPin_;
     bool enabled_;
+    bool ready_;
+    int32_t lastCommandedTarget_;
+    float configuredMaxSpeed_;
+    float configuredAcceleration_;
 };
 }

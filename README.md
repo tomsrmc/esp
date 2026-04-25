@@ -217,7 +217,7 @@ Libraries in use:
 
 - `ArduinoJson`
 - `WebSockets`
-- `AccelStepper`
+- `FastAccelStepper`
 
 ## Startup behavior
 
@@ -411,7 +411,11 @@ When a client connects, the server immediately sends:
 ```json
 {
 	"type": "connected",
-	"client": 0
+	"client": 0,
+	"version": "1.0",
+	"capabilities": {
+		"protocolVersion": "1.0"
+	}
 }
 ```
 
@@ -421,7 +425,7 @@ Most clients should wait for this message before sending commands.
 
 Clients send JSON messages with a `command` field.
 
-The `blink` and `status` handlers echo request `id` values. The current `stepper_jog` handler does not echo `id`, so clients should not rely on that field for that command yet.
+Command handlers preserve request `id` values in their response envelopes and in emitted stepper lifecycle events when an `id` is supplied.
 
 #### Generic format
 
@@ -511,7 +515,7 @@ Queue a relative stepper move.
 
 Defaults used by the handler if omitted:
 
-- `delta = 80`
+- `delta = 160`
 - `speed = 800`
 
 ##### Response
@@ -612,9 +616,9 @@ These are important for anyone building on the current code:
 2. There is no HTTPS or secure WebSocket transport.
 3. mDNS advertises the HTTP service, but not a WebSocket-specific service record.
 4. `blink` handlers are synchronous and block while pulsing the LED.
-5. `stepper_jog` starts non-blocking motion, but there is no completion event or progress broadcast yet.
-6. The WebSocket `stepper_jog` response currently does not echo request `id` values.
-7. Stepper pins and motion defaults are currently hardcoded in firmware.
+5. Motion remains single-axis only; there is no homing, endstop, or multi-axis planner.
+6. Stepper pins and the default motion profile are currently hardcoded in firmware.
+7. TMC2209 UART-only diagnostics and tuning are not implemented.
 8. The companion `espcontrol` project still includes a legacy `/run` helper that this firmware does not implement.
 
 ## Motion setup notes

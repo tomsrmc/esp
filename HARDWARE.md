@@ -55,8 +55,9 @@ Current firmware assumptions:
 
 - `EN` is active-low
 - a LOW level on GPIO `27` enables the driver
-- motion commands are relative jogs driven through AccelStepper in `DRIVER` mode
-- the firmware uses a conservative minimum step pulse width to improve TMC2209 compatibility
+- motion commands are relative jogs executed by FastAccelStepper on ESP32 hardware timers
+- the firmware applies a short direction-change guard time before issuing new pulses
+- the firmware uses FastAccelStepper auto-enable with a small enable lead time and delayed disable
 
 ## Wiring requirements
 
@@ -121,7 +122,7 @@ For this board and project:
 Expected serial behavior after the recent stepper diagnostics changes:
 
 - boot log at `115200`
-- a stepper initialization line showing enable pin, speed, acceleration, and pulse width
+- a stepper initialization line showing step pin, direction pin, enable pin, speed, acceleration, and direction delay
 - a jog queue line each time a `stepper_jog` command is accepted
 
 ## Recommended first-power checklist

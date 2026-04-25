@@ -38,7 +38,7 @@ bool handleStepperJog(uint8_t clientNum, const JsonDocument& doc) {
     JsonDocument response;
     uint32_t requestId = 0;
     bool hasRequestId = readRequestId(doc, requestId);
-    long delta = doc["delta"] | 80;
+    long delta = doc["delta"] | 160;
     float speed = doc["speed"] | 800.0f;
     stepperService.jog(delta, speed, hasRequestId, requestId, response);
     sendResponse(clientNum, response);

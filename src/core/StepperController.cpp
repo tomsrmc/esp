@@ -5,29 +5,59 @@
 namespace Core {
 
 StepperController::StepperController(int stepPin, int dirPin, int enPin)
-    : stepper_(AccelStepper::DRIVER, stepPin, dirPin), enPin_(enPin), enabled_(false) {}
+    : stepper_(nullptr),
+      stepPin_(stepPin),
+      dirPin_(dirPin),
+      enPin_(enPin),
+      enabled_(false),
+      ready_(false),
+      lastCommandedTarget_(0),
+      configuredMaxSpeed_(kDefaultSpeed),
+      configuredAcceleration_(kDefaultAcceleration) {}
 
 void StepperController::begin() {
-    pinMode(enPin_, OUTPUT);
-    digitalWrite(enPin_, LOW); // Enable driver
+    engine_.init();
+    stepper_ = engine_.stepperConnectToPin(stepPin_);
+    if (stepper_ == nullptr) {
+        Serial.printf("Stepper init failed: step pin %d could not be attached\n", stepPin_);
+        enabled_ = false;
+        ready_ = false;
+        return;
+    }
+
+    stepper_->setDirectionPin(dirPin_, true, kDirectionChangeDelayMicros);
+    stepper_->setEnablePin(enPin_, true);
+    stepper_->setAutoEnable(true);
+    stepper_->setDelayToEnable(kEnableDelayMicros);
+    stepper_->setDelayToDisable(4);
+    applyMotionProfile();
+
+    stepper_->forceStopAndNewPosition(0);
+    lastCommandedTarget_ = 0;
     enabled_ = true;
-    stepper_.setMinPulseWidth(20);
-    stepper_.setMaxSpeed(kDefaultSpeed);
-    stepper_.setAcceleration(kDefaultAcceleration);
-    digitalWrite(enPin_, LOW);
+    ready_ = true;
     delay(300);
-    Serial.printf("Stepper ready: enablePin=%d maxSpeed=%.1f accel=%.1f minPulseWidth=%u\n",
-                  enPin_, stepper_.maxSpeed(), stepper_.acceleration(), 20U);
+    Serial.printf("Stepper ready: stepPin=%d dirPin=%d enablePin=%d maxSpeed=%.1f accel=%.1f dirDelayUs=%u\n",
+                  stepPin_, dirPin_, enPin_, configuredMaxSpeed_, configuredAcceleration_,
+                  kDirectionChangeDelayMicros);
 }
 
 void StepperController::jog(long delta) {
-    stepper_.move(delta);
+    if (!ready_) {
+        return;
+    }
+
+    stepper_->move(delta);
+    lastCommandedTarget_ += static_cast<int32_t>(delta);
     Serial.printf("Stepper jog queued: delta=%ld target=%ld remaining=%ld\n",
-                  delta, stepper_.targetPosition(), stepper_.distanceToGo());
+                  delta, static_cast<long>(lastCommandedTarget_),
+                  static_cast<long>(distanceToGo()));
 }
 
 void StepperController::loop() {
-    stepper_.run();
+    if (!ready_) {
+        return;
+    }
 }
 
 void StepperController::setSpeed(float speed) {
@@ -38,7 +68,10 @@ bool StepperController::setMaxSpeed(float speed) {
     if (!isValidMaxSpeed(speed)) {
         return false;
     }
-    stepper_.setMaxSpeed(speed);
+    configuredMaxSpeed_ = speed;
+    if (ready_) {
+        applyMotionProfile();
+    }
     return true;
 }
 
@@ -46,60 +79,63 @@ bool StepperController::setAcceleration(float acceleration) {
     if (!isValidAcceleration(acceleration)) {
         return false;
     }
-    stepper_.setAcceleration(acceleration);
+    configuredAcceleration_ = acceleration;
+    if (ready_) {
+        applyMotionProfile();
+    }
     return true;
 }
 
 void StepperController::stop() {
-    stepper_.stop();
+    if (!ready_) {
+        return;
+    }
+
+    stepper_->stopMove();
+    lastCommandedTarget_ = stepper_->targetPos();
 }
 
 void StepperController::immediateStop() {
-    long position = stepper_.currentPosition();
-    stepper_.moveTo(position);
-    stepper_.setCurrentPosition(position);
-    stepper_.setSpeed(0.0f);
+    if (!ready_) {
+        return;
+    }
+
+    int32_t position = stepper_->getCurrentPosition();
+    stepper_->forceStopAndNewPosition(position);
+    lastCommandedTarget_ = position;
 }
 
 StepperState StepperController::getState() {
-    return {
-        stepper_.currentPosition(),
-        stepper_.targetPosition(),
-        stepper_.distanceToGo(),
-        isMoving(),
-        enabled_,
-        stepper_.speed(),
-        stepper_.maxSpeed(),
-        stepper_.acceleration(),
-    };
+    return buildState();
 }
 
 long StepperController::currentPosition() {
-    return stepper_.currentPosition();
+    return buildState().currentPosition;
 }
 
 long StepperController::targetPosition() {
-    return stepper_.targetPosition();
+    return buildState().targetPosition;
 }
 
 long StepperController::distanceToGo() {
-    return stepper_.distanceToGo();
+    StepperState state = buildState();
+    return state.distanceToGo;
 }
 
 float StepperController::currentSpeed() {
-    return stepper_.speed();
+    return buildState().currentSpeed;
 }
 
 float StepperController::maxSpeed() {
-    return stepper_.maxSpeed();
+    return configuredMaxSpeed_;
 }
 
 float StepperController::acceleration() {
-    return stepper_.acceleration();
+    return configuredAcceleration_;
 }
 
 bool StepperController::isMoving() {
-    return stepper_.distanceToGo() != 0 || stepper_.speed() != 0.0f;
+    return buildState().moving;
 }
 
 bool StepperController::isEnabled() const {
@@ -112,6 +148,46 @@ bool StepperController::isValidMaxSpeed(float speed) {
 
 bool StepperController::isValidAcceleration(float acceleration) {
     return acceleration >= kMinAcceleration && acceleration <= kMaxAcceleration;
+}
+
+void StepperController::applyMotionProfile() {
+    if (!ready_ || stepper_ == nullptr) {
+        return;
+    }
+
+    stepper_->setSpeedInHz(static_cast<uint32_t>(configuredMaxSpeed_));
+    stepper_->setAcceleration(static_cast<uint32_t>(configuredAcceleration_));
+}
+
+StepperState StepperController::buildState() const {
+    if (!ready_ || stepper_ == nullptr) {
+        return {
+            0,
+            lastCommandedTarget_,
+            lastCommandedTarget_,
+            false,
+            false,
+            0.0f,
+            configuredMaxSpeed_,
+            configuredAcceleration_,
+        };
+    }
+
+    int32_t current = stepper_->getCurrentPosition();
+    int32_t target = stepper_->targetPos();
+    int32_t remaining = target - current;
+    bool moving = stepper_->isRunning() || remaining != 0;
+
+    return {
+        current,
+        target,
+        remaining,
+        moving,
+        enabled_,
+        moving ? configuredMaxSpeed_ : 0.0f,
+        configuredMaxSpeed_,
+        configuredAcceleration_,
+    };
 }
 
 } // namespace Core
