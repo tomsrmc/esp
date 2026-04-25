@@ -3,8 +3,11 @@
 #include <WiFi.h>
 #include <Arduino.h>
 #include "../../core/AppServer.h"
+#include "../../core/StepperService.h"
 
 using Core::sendJson;
+
+extern Core::StepperService stepperService;
 
 namespace Endpoints {
   void handleInfo() {
@@ -13,6 +16,14 @@ namespace Endpoints {
     doc["rssi"] = WiFi.RSSI();
     doc["uptimeMs"] = millis();
     doc["freeHeap"] = ESP.getFreeHeap();
+    String out;
+    serializeJson(doc, out);
+    sendJson(200, out);
+  }
+
+  void handleCapabilities() {
+    JsonDocument doc;
+    stepperService.getCapabilities(false, 0, doc);
     String out;
     serializeJson(doc, out);
     sendJson(200, out);

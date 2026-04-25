@@ -13,6 +13,7 @@
 #include "core/AppServer.h"
 #include "core/WiFiManager.h"
 #include "core/StepperController.h"
+#include "core/StepperService.h"
 #include "core/MDNSManager.h"
 #include "websocket/WebSocketManager.h"
 #include "websocket/MessageRouter.h"
@@ -22,6 +23,22 @@ using namespace Core;
 
 static const unsigned long HEARTBEAT_PERIOD = 3000;
 StepperController stepper(25, 26, 27);
+StepperService stepperService(stepper, 2);
+
+namespace {
+String buildConnectEnvelope(uint8_t clientNum) {
+	JsonDocument doc;
+	doc["type"] = "connected";
+	doc["client"] = clientNum;
+	doc["version"] = StepperService::kProtocolVersion;
+	JsonObject capabilities = doc["capabilities"].to<JsonObject>();
+	stepperService.fillCapabilities(capabilities);
+
+	String out;
+	serializeJson(doc, out);
+	return out;
+}
+}
 
 void setup() {
 	Serial.begin(115200);
@@ -30,6 +47,7 @@ void setup() {
 	Serial.println("Booting ESP32 API with Stepper…");
 
 	stepper.begin();
+	stepperService.begin();
 	WiFiManager::connect(WIFI_SSID, WIFI_PASSWORD, Serial);
 	MDNSManager::begin(MDNS_HOSTNAME);
 
@@ -39,6 +57,7 @@ void setup() {
 
 	// Start WebSocket server
 	WebSocket::Manager::begin(81);
+	WebSocket::Manager::onConnect(buildConnectEnvelope);
 	WebSocket::Manager::onMessage(WebSocket::handleMessage);
 	Serial.println("WebSocket server ready on port 81");
 }
@@ -46,7 +65,13 @@ void setup() {
 void loop() {
 	server.handleClient();
 	WebSocket::Manager::loop();
-	stepper.loop();
+	stepperService.loop();
+	JsonDocument event;
+	while (stepperService.consumePendingEvent(event)) {
+		String payload;
+		serializeJson(event, payload);
+		WebSocket::Manager::broadcast(payload);
+	}
 	static unsigned long last = 0;
 	if (millis() - last > HEARTBEAT_PERIOD) {
 		last = millis();

@@ -30,6 +30,18 @@ namespace WebSocket {
     else if (strcmp(command, "stepper_jog") == 0) {
       handled = Commands::handleStepperJog(clientNum, doc);
     }
+    else if (strcmp(command, "stepper_status") == 0) {
+      handled = Commands::handleStepperStatus(clientNum, doc);
+    }
+    else if (strcmp(command, "stepper_stop") == 0) {
+      handled = Commands::handleStepperStop(clientNum, doc);
+    }
+    else if (strcmp(command, "stepper_config") == 0) {
+      handled = Commands::handleStepperConfig(clientNum, doc);
+    }
+    else if (strcmp(command, "capabilities") == 0) {
+      handled = Commands::handleCapabilities(clientNum, doc);
+    }
     
     if (!handled) {
       String response = "{\"error\":\"Unknown command\",\"code\":\"UNKNOWN_COMMAND\",\"received\":\"" + String(command) + "\"}";

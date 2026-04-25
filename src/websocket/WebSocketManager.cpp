@@ -6,6 +6,7 @@ namespace WebSocket {
     namespace {
       WebSocketsServer* server_ = nullptr;
       std::function<void(uint8_t, const String&)> messageHandler_ = nullptr;
+      std::function<String(uint8_t)> connectHandler_ = nullptr;
 
       void handleEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length) {
         switch (type) {
@@ -16,7 +17,9 @@ namespace WebSocket {
           case WStype_CONNECTED: {
             IPAddress ip = server_->remoteIP(num);
             Serial.printf("[%u] Connected from %d.%d.%d.%d\n", num, ip[0], ip[1], ip[2], ip[3]);
-            String welcome = "{\"type\":\"connected\",\"client\":" + String(num) + "}";
+            String welcome = connectHandler_
+              ? connectHandler_(num)
+              : "{\"type\":\"connected\",\"client\":" + String(num) + "}";
             server_->sendTXT(num, welcome);
             break;
           }
@@ -55,6 +58,10 @@ namespace WebSocket {
 
     void onMessage(std::function<void(uint8_t, const String&)> handler) {
       messageHandler_ = handler;
+    }
+
+    void onConnect(std::function<String(uint8_t)> handler) {
+      connectHandler_ = handler;
     }
 
     void broadcast(const String& message) {

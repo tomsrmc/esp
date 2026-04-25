@@ -4,4 +4,5 @@
 
 #include "commands/Blink.h"
 #include "commands/Status.h"
+#include "commands/Stepper.h"
 

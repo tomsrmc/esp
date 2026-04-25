@@ -2,4 +2,5 @@
 
 namespace Endpoints {
   void handleInfo();
+  void handleCapabilities();
 }

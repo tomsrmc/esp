@@ -26,7 +26,8 @@ In the main loop, the firmware:
 
 - services HTTP requests
 - services WebSocket traffic
-- advances in-progress stepper motion with `stepper.loop()`
+- advances in-progress stepper motion and feedback with the shared stepper service
+- broadcasts queued stepper lifecycle events over WebSocket
 - sends periodic WebSocket ping frames to connected clients
 
 ## Current exposed functionality
@@ -36,14 +37,83 @@ In the main loop, the firmware:
 - `GET /health` — simple health check
 - `GET /system/info` — current IP, RSSI, uptime, and free heap
 - `GET /system/status` — legacy alias for `/system/info`
+- `GET /system/capabilities` — protocol version, supported commands, events, and safety limits
 - `POST /led/blink` — pulse the onboard LED
 - `POST /stepper/jog` — queue a relative stepper move
+- `GET /stepper/status` — current motion state for the single motor
+- `POST /stepper/stop` — request a stop, optionally immediate
+- `GET /stepper/config` — current motion config plus protocol limits
+- `POST /stepper/config` — update runtime max speed and/or acceleration within firmware safety rails
 
 ### WebSocket commands
 
 - `blink` — pulse the onboard LED
 - `status` — return runtime information
 - `stepper_jog` — queue a relative stepper move
+- `stepper_status` — read current motion state
+- `stepper_stop` — stop active motion
+- `stepper_config` — read or update runtime motion config
+- `capabilities` — return protocol version, supported commands/events, and safe ranges
+
+### WebSocket events
+
+- `stepper.started` — motion transitioned from idle to moving
+- `stepper.completed` — motion reached its target
+- `stepper.stopped` — motion was stopped before normal completion
+- `stepper.fault` — command or configuration was rejected by firmware validation
+
+## Motor control contract
+
+Stepper control is now routed through a shared firmware-side service so REST and WebSocket commands use the same validation, safety limits, and state model.
+
+### Response envelope
+
+All motor-related responses use the same envelope:
+
+```json
+{
+	"version": "1.0",
+	"axis": "main",
+	"command": "stepper_jog",
+	"status": "ok",
+	"code": "STEPPER_JOG_ACCEPTED",
+	"message": "Jog queued",
+	"id": 3,
+	"data": {
+		"delta": 160,
+		"requestedSpeed": 800,
+		"stepper": {
+			"axis": "main",
+			"currentPosition": 0,
+			"targetPosition": 160,
+			"distanceToGo": 160,
+			"moving": true,
+			"enabled": true,
+			"currentSpeed": 0,
+			"maxSpeed": 800,
+			"acceleration": 600
+		}
+	}
+}
+```
+
+Notes:
+
+- `id` is echoed when the caller supplied a WebSocket request ID
+- `version` is the protocol version exposed by the firmware
+- `axis` is reserved for future expansion but remains single-axis today
+- `data.stepper` is the authoritative motion state surface for both REST and WebSocket stepper commands
+
+### Connect handshake
+
+The initial WebSocket `connected` frame now includes:
+
+- `version`
+- `capabilities.commands`
+- `capabilities.events`
+- `capabilities.limits`
+
+This lets the host detect supported commands and safe configuration ranges at connect time instead of assuming a fixed firmware revision.
 
 ## Architecture overview
 
@@ -73,8 +143,9 @@ The codebase is intentionally split into small modules:
 #### Stepper flow
 
 1. `main.cpp` creates a global `StepperController stepper(25, 26, 27)`.
-2. HTTP or WebSocket handlers call `stepper.setSpeed(speed)` and `stepper.jog(delta)`.
-3. `stepper.loop()` keeps motion progressing from the main loop using `AccelStepper`.
+2. `main.cpp` creates a shared `StepperService` that owns motion validation, runtime config, and lifecycle events.
+3. HTTP and WebSocket handlers delegate to that service instead of duplicating motion logic.
+4. `StepperService::loop()` keeps motion progressing, handles non-blocking LED feedback, and queues lifecycle events.
 
 This means stepper motion is queued and then advanced incrementally in the loop rather than completed inside the request handler itself.
 

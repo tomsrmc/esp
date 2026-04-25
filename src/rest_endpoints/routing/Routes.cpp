@@ -36,6 +36,10 @@ namespace Endpoints {
     s.on("/system/status", HTTP_GET, wrap(Endpoints::handleInfo));
     s.on("/system/status", HTTP_OPTIONS, handleOptions);
 
+    // Firmware capabilities and protocol discovery
+    s.on("/system/capabilities", HTTP_GET, wrap(Endpoints::handleCapabilities));
+    s.on("/system/capabilities", HTTP_OPTIONS, handleOptions);
+
     // LED blink
     s.on("/led/blink", HTTP_POST, wrap(Endpoints::handleBlink));
     s.on("/led/blink", HTTP_OPTIONS, handleOptions);
@@ -43,5 +47,14 @@ namespace Endpoints {
     // Stepper jog
     s.on("/stepper/jog", HTTP_POST, wrap(Endpoints::handleStepperJog));
     s.on("/stepper/jog", HTTP_OPTIONS, handleOptions);
+
+    // Stepper lifecycle and runtime configuration
+    s.on("/stepper/status", HTTP_GET, wrap(Endpoints::handleStepperStatus));
+    s.on("/stepper/status", HTTP_OPTIONS, handleOptions);
+    s.on("/stepper/stop", HTTP_POST, wrap(Endpoints::handleStepperStop));
+    s.on("/stepper/stop", HTTP_OPTIONS, handleOptions);
+    s.on("/stepper/config", HTTP_GET, wrap(Endpoints::handleStepperConfig));
+    s.on("/stepper/config", HTTP_POST, wrap(Endpoints::handleStepperConfig));
+    s.on("/stepper/config", HTTP_OPTIONS, handleOptions);
   }
 }
